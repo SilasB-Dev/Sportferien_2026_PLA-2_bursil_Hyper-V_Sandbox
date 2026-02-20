@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- *******************************************************************
+These sample files contain formatting information used by the Windows 
+PowerShell engine. Do not edit or change the contents of this file 
+directly. Please see the Windows PowerShell documentation or type 
+Get-Help Update-FormatData for more information.
+
+Copyright (c) Microsoft Corporation.  All rights reserved.
+ 
+THIS SAMPLE CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY 
+OF ANY KIND,WHETHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO 
+THE IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR
+PURPOSE. IF THIS CODE AND INFORMATION IS MODIFIED, THE ENTIRE RISK OF USE
+OR RESULTS IN CONNECTION WITH THE USE OF THIS CODE AND INFORMATION 
+REMAINS WITH THE USER.
+******************************************************************** -->
+
+<Configuration>
+    <Controls>
+        <Control>
+            <Name>Registry-GroupingFormat</Name>
+                    <CustomControl>
+                        <CustomEntries>
+                            <CustomEntry>
+                                <CustomItem>
+                                    <Frame>
+                                        <LeftIndent>4</LeftIndent>
+                                        <CustomItem>
+                                            <Text>Hive: </Text>
+                                            <ExpressionBinding>
+                                                <ScriptBlock>$_.PSParentPath.Replace("Microsoft.PowerShell.Core\Registry::", "")</ScriptBlock>
+                                            </ExpressionBinding>
+                                            <NewLine/>
+                                        </CustomItem> 
+                                    </Frame>
+                                </CustomItem>
+                            </CustomEntry>
+                        </CustomEntries>
+            </CustomControl>
+        </Control>
+    </Controls>
+
+    <ViewDefinitions>
+        <View>
+            <Name>children</Name>
+            <ViewSelectedBy>
+                <TypeName>Microsoft.Win32.RegistryKey</TypeName>
+                <TypeName>Microsoft.PowerShell.Commands.Internal.TransactedRegistryKey</TypeName>
+                <TypeName>System.Management.Automation.TreatAs.RegistryValue</TypeName>
+            </ViewSelectedBy>
+            <GroupBy>
+                <PropertyName>PSParentPath</PropertyName>
+                <CustomControlName>Registry-GroupingFormat</CustomControlName>  
+            </GroupBy>
+            <TableControl>
+                <TableHeaders>
+                   <TableColumnHeader>
+                        <Width>30</Width>
+                        <Label>Name</Label>
+                    </TableColumnHeader>
+                    <TableColumnHeader>
+                      <Label>Property</Label>
+                    </TableColumnHeader>
+                </TableHeaders>
+                <TableRowEntries>
+                    <TableRowEntry>
+                      <Wrap/>
+                        <TableColumnItems>
+                            <TableColumnItem>
+                                <PropertyName>PSChildName</PropertyName>
+                            </TableColumnItem>
+                            <TableColumnItem>
+                                <ScriptBlock>
+                                $result = ""
+                                if($_.PSPath.startswith("Microsoft.PowerShell.Core\Registry")){
+                                    $result = (Get-ItemProperty -LiteralPath $_.PSPath | Select * -Exclude PSPath,PSParentPath,PSChildName,PSDrive,PsProvider | Format-List | Out-String | Sort).Trim()
+                                    $result = $result.Substring(0, [Math]::Min($result.Length, 5000) )
+                                    if($result.Length -eq 5000) { $result += "..." }
+                                }
+                                $result
+                                </ScriptBlock>
+                            </TableColumnItem>
+                        </TableColumnItems>
+                    </TableRowEntry>
+                </TableRowEntries>
+            </TableControl>
+        </View>
+    </ViewDefinitions>
+</Configuration>

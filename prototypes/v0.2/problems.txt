@@ -1,0 +1,9 @@
+1.
+Zwischen starten des Programms und dem kopieren des Files in die VM vergehen ~40s
+Es wäre gut, wenn dies schneller gehen würde
+
+2.
+Im Isolationsmodus hat die VM keine Internetverbindung. Dies könnte ein Problem sein für Applikationen die Internetverbindung brauchen
+
+3. 
+Ausführlichere Debug Messages wären gut

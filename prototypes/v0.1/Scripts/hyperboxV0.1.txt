@@ -1,0 +1,106 @@
+<#
+Author: Silas Burkhard
+Date: 11.02.2026
+Version: 0.1
+Description:
+Prototyp für Hyperbox.
+Grundlegende Funktionen wie erstellen von VM,
+kopieren des Files, Löschen der VM
+#>
+param (
+    [Parameter()]
+    [string]
+    $suspiciousFilePath
+)
+Write-Host "Time: " + (Get-Date -Format "HH:mm:ss")
+$starts = Get-Date -Format "ss"
+$startm = Get-Date -Format "mm"
+Write-Host "Target File: $suspiciousFilePath"
+
+
+$workingdir = "C:\Users\silas\Documents\010_ZLI\Sportferienprojekt\prototypes\v0.1" # Or $workingdir = pwd, $workingdir = $workingdir.Path
+$suspiciousFilePath = $suspiciousFilePath.Replace("/","\")
+$filename = $suspiciousFilePath.Substring($suspiciousFilePath.LastIndexOf("\")+1)
+$MasterVHDPath = ".\VMs\Masterv0.1.vhdx"
+$SwitchName = "Isolation"
+$ChildrenVHDPath = "./VMs/Childv0.1.vhdx"
+$destPath = "C:\Users\admin\Desktop\Files\$filename" 
+
+$ConfirmPreference = 'None'
+
+$username = "admin"
+$password = "admin"
+$securePassword = ConvertTo-SecureString $password -AsPlainText -Force
+$credential = New-Object System.Management.Automation.PSCredential ($username, $securePassword)
+
+#### Stolen Code
+
+if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
+    Start-Process powershell "-ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
+    exit
+}
+# Script continues with admin privileges
+Write-Host "Running as Administrator"
+#### End Stolen Code
+
+Set-Location $workingdir
+
+
+
+
+
+if (Test-Path -Path $ChildrenVHDPath) {
+    Remove-Item -Path $ChildrenVHDPath
+    Write-Host "Removed Old VHD"
+}
+
+Write-Host "Copying VHD..."
+Copy-Item -Path $MasterVHDPath -Destination $ChildrenVHDPath
+Write-Host "Done"
+
+
+$VMName = "Childv0.1"
+$VM = @{
+Name = $VMName
+MemoryStartupBytes = 4Gb
+Generation = 2
+VHDPath = $ChildrenVHDPath
+BootDevice = "VHD"
+Path = ".\VMData"
+SwitchName = $SwitchName
+}
+New-VM @VM
+$VM = Get-VM -Name $VMName
+#Enable-VMTPM -VMName $VMName
+Set-VMProcessor $VMName -Count 2
+
+Write-Host "Created new VM"
+
+
+Start-VM $VMName
+vmconnect.exe localhost $VMName
+Write-Host "Started VM"
+
+do {
+    Start-Sleep -Seconds 1
+} until ($VM.state -eq "Running") # (Get-VM | Select-Object -ExpandProperty NetworkAdapters | Select-Object -exp Status)
+Start-Sleep -Seconds 10
+
+$PSSession = New-PSSession -VMName $VMName -Credential ($credential)
+Copy-Item -ToSession $PSSession -Path $suspiciousFilePath -Destination $destPath
+
+Write-Host "Time: " + (Get-Date -Format "HH:mm:ss")
+
+
+
+
+###############
+#   Cleanup   #
+###############
+Wait-Process -Name "vmconnect"
+Stop-VM $VMName -TurnOff 
+Remove-VM $VMName -Force
+Remove-Item ".\VMData\$VMName" -Recurse
+
+Write-Host "Cleaned up"
+
